@@ -10,25 +10,26 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
+    // Filter only Frame and Wheels parts (delete groupset)
     val frames = parts.filter { it.type == "Frame" }
-    val groupsets = parts.filter { it.type == "Groupset" }
     val wheels = parts.filter { it.type == "Wheels" }
 
     var selectedFrame by remember { mutableStateOf(frames.firstOrNull()) }
-    var selectedGroupset by remember { mutableStateOf(groupsets.firstOrNull()) }
     var selectedWheels by remember { mutableStateOf(wheels.firstOrNull()) }
     var zoomScale by remember { mutableStateOf(1f) }
 
     var frameDropdownExpanded by remember { mutableStateOf(false) }
     var wheelsDropdownExpanded by remember { mutableStateOf(false) }
-    var groupsetDropdownExpanded by remember { mutableStateOf(false) }
 
-    var showConnectionJoints by remember { mutableStateOf(parts.isNotEmpty()) }
+    // Data model for joint points stored as "x:y" strings in DB
+    data class JointCoord(
+        val x: Float,
+        val y: Float
+    )
 
-    // Resolve nullable parts safely - avoid smart cast on delegated properties
+    // Resolve nullable parts safely
     val maybeFrame: ConfiguratorPart? = selectedFrame
     val maybeWheels: ConfiguratorPart? = selectedWheels
-    val maybeGroupset: ConfiguratorPart? = selectedGroupset
 
     Column(
         modifier = Modifier
@@ -48,7 +49,7 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Selection Dropdowns
+        // Selection Dropdowns - only Frame and Wheels
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(24.dp)
@@ -92,35 +93,16 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                     }
                 }
             }
-
-            Box(modifier = Modifier.weight(1f)) {
-                OutlinedButton(
-                    onClick = { groupsetDropdownExpanded = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Groupset: ${selectedGroupset?.name ?: "Select Groupset"}")
-                }
-                DropdownMenu(expanded = groupsetDropdownExpanded, onDismissRequest = { groupsetDropdownExpanded = false }) {
-                    groupsets.forEach { group ->
-                        DropdownMenuItem(
-                            text = { Text(group.name) },
-                            onClick = {
-                                selectedGroupset = group
-                                groupsetDropdownExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Visual Assembly Canvas - layered: frame on top, wheels under, groupset at bottom
+        // SINGLE CARD: Bike image with layered frame on top, wheels behind
+        // Frame stores photoUrl + "x:y" joint coordinates as strings
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(560.dp),
+                .height(480.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             shape = RoundedCornerShape(16.dp)
@@ -137,165 +119,130 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.Start
                 ) {
                     // --- FRAME (top layer) ---
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(280.dp)
-                            .background(Color(0xFFE0E0E0)),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0))
-                    ) {
-                        // Frame image - full bleed, name at bottom
-                        if (maybeFrame != null && maybeFrame.imageUrl.isNotBlank()) {
-                            // Show frame image with URL
+                    // Frame image with name at bottom
+                    if (maybeFrame != null && maybeFrame.imageUrl.isNotBlank()) {
+                        // Display frame image - full width, name at bottom
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(280.dp)
+                                .background(Color(0xFFE0E0E0)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Frame name at BOTTOM of image
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Gray),
+                                    .fillMaxWidth()
+                                    .height(30.dp)
+                                    .align(Alignment.BottomCenter),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "Frame: ${maybeFrame.name}",
+                                    maybeFrame.name,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black,
-                                    // Background bar at bottom for name
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .paddingBottom(8.dp),
                                     background = Color(0xFFFFFFFF).copyAlpha(0.8f)
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // Image placeholder with URL info
+                            Text(
+                                "Frame Photo URL stored in DB",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                            )
+                            // Joint coordinates info
+ if (maybeFrame.jointCoords != null && maybeFrame.jointCoords.isNotEmpty()) {
                                 Text(
-                                    "Image: ${maybeFrame.imageUrl.substring(0, if (maybeFrame.imageUrl.length > 50) 50 else maybeFrame.imageUrl.length)}...",
+                                    "Joint coords: ${maybeFrame.jointCoords.joinToString(",") { "${it.x}:${it.y}" }}",
                                     fontSize = 11.sp,
-                                    color = Color.Gray
+                                    color = Color.Blue
                                 )
                             }
-                        } else {
-                            // Placeholder
-                            Box(
-                                modifier = Modifier.fillMaxSize().background(Color.Gray),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "🖼️ Frame",
-                                    fontSize = 24.sp,
-                                    color = Color.White,
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .paddingBottom(8.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Add frame via Admin", fontSize = 12.sp, color = Color.Gray)
-                            }
+                        }
+                    } else {
+                        // Placeholder when no frame selected
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(280.dp).background(Color.Gray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "🖼️ Frame",
+                                fontSize = 24.sp,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .paddingBottom(8.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Add frame via Admin", fontSize = 12.sp, color = Color.Gray)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // --- WHEELS (middle layer) ---
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
-                            .background(Color(0xFFD0D0D0)),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFD0D0D0))
-                    ) {
-                        // Wheels image - full bleed, name at bottom
-                        if (maybeWheels != null && maybeWheels.imageUrl.isNotBlank()) {
+                    // --- WHEELS (behind frame layer) ---
+                    // Wheels image with name at bottom
+                    if (maybeWheels != null && maybeWheels.imageUrl.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .background(Color(0xFFD0D0D0)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Wheels name at BOTTOM of image
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Gray),
+                                    .fillMaxWidth()
+                                    .height(30.dp)
+                                    .align(Alignment.BottomCenter),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "Wheels: ${maybeWheels.name}",
+                                    maybeWheels.name,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black,
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .paddingBottom(8.dp),
                                     background = Color(0xFFFFFFFF).copyAlpha(0.8f)
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    "Image: ${maybeWheels.imageUrl.substring(0, if (maybeWheels.imageUrl.length > 50) 50 else maybeWheels.imageUrl.length)}...",
-                                    fontSize = 11.sp,
-                                    color = Color.Gray
-                                )
                             }
-                        } else {
-                            Box(
-                                modifier = Modifier.fillMaxSize().background(Color.Gray),
-                                contentAlignment = Alignment.Center
-                            ) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // Image placeholder with URL info
+                            Text(
+                                "Wheels Photo URL stored in DB",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                            )
+                            // Joint coordinates info
+ if (maybeWheels.jointCoords != null && maybeWheels.jointCoords.isNotEmpty()) {
                                 Text(
-                                    "🛞 Wheels",
-                                    fontSize = 20.sp,
-                                    color = Color.White,
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .paddingBottom(8.dp)
+                                    "Joint coords: ${maybeWheels.jointCoords.joinToString(",") { "${it.x}:${it.y}" }}",
+                                    fontSize = 11.sp,
+                                    color = Color.Blue
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Select wheels", fontSize = 12.sp, color = Color.Gray)
                             }
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // --- GROUpsET (bottom layer) ---
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .background(Color(0xFFC0C0C0)),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFC0C0C0))
-                    ) {
-                        // Groupset image - full bleed, name at bottom
-                        if (maybeGroupset != null && maybeGroupset.imageUrl.isNotBlank()) {
-                            Box(
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp).background(Color.Gray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "🛞 Wheels",
+                                fontSize = 20.sp,
+                                color = Color.White,
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Gray),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "Groupset: ${maybeGroupset.name}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.Black,
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .paddingBottom(8.dp),
-                                    background = Color(0xFFFFFFFF).copyAlpha(0.8f)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    "Image: ${maybeGroupset.imageUrl.substring(0, if (maybeGroupset.imageUrl.length > 50) 50 else maybeGroupset.imageUrl.length)}...",
-                                    fontSize = 11.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                        } else {
-                            Box(
-                                modifier = Modifier.fillMaxSize().background(Color.Gray),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "⚙️ Groupset",
-                                    fontSize = 18.sp,
-                                    color = Color.White,
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .paddingBottom(8.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Select groupset", fontSize = 11.sp, color = Color.Gray)
-                            }
+                                    .align(Alignment.BottomCenter)
+                                    .paddingBottom(8.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Select wheels", fontSize = 12.sp, color = Color.Gray)
                         }
                     }
                 }
@@ -304,88 +251,61 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Connection Joints panel - appears after parts configured
-        if (showConnectionJoints || selectedFrame != null || selectedWheels != null || selectedGroupset != null) {
+        // Connection info - appears when parts are configured
+        if (selectedFrame != null || selectedWheels != null) {
             Card(
                 modifier = Modifier
                     .weight(1f)
-                    .height(300.dp),
+                    .height(100.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp)
-                        .verticalScroll(rememberScrollState())
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    // Frame joint info
+ if (maybeFrame != null && maybeFrame.jointCoords != null && maybeFrame.jointCoords.isNotEmpty()) {
                         Text(
-                            "Connection Joints & Contact Points",
-                            fontSize = 20.sp,
+                            "Frame joints: ${maybeFrame.jointCoords.size} points",
+                            fontSize = 12.sp,
+                            color = Color(0xFF34C759),
                             fontWeight = FontWeight.Bold
                         )
-                        if (parts.isNotEmpty()) {
-                            Text(
-                                "• ${parts.size} part(s) configured",
-                                fontSize = 11.sp,
-                                color = Color.Gray
-                            )
-                        }
+                    } else {
+                        Text("Frame joints: none", fontSize = 12.sp, color = Color.Gray)
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    val allPoints = mutableListOf<ConnectionPoint>()
-                    selectedFrame?.let { allPoints.addAll(it.points) }
-                    selectedWheels?.let { allPoints.addAll(it.points) }
-                    selectedGroupset?.let { allPoints.addAll(it.points) }
-
-                    if (allPoints.isEmpty()) {
+                    // Wheels joint info
+ if (maybeWheels != null && maybeWheels.jointCoords != null && maybeWheels.jointCoords.isNotEmpty()) {
                         Text(
-                            "No contact points configured. Add parts via Admin to configure connection joints.",
-                            fontSize = 13.sp,
-                            color = Color.Gray
+                            "Wheels joints: ${maybeWheels.jointCoords.size} points",
+                            fontSize = 12.sp,
+                            color = Color(0xFF34C759),
+                            fontWeight = FontWeight.Bold
                         )
                     } else {
-                        allPoints.forEach { point ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA))
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(point.name, fontWeight = FontWeight.Bold)
-                                        Text(
-                                            "Position: X ${(point.x * 100).toInt()}% | Y ${(point.y * 100).toInt()}%",
-                                            fontSize = 11.sp,
-                                            color = Color.Gray
-                                        )
-                                    }
-                                    Text(
-                                        "✓ Connected",
-                                        color = Color(0xFF34C759),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
-                                    )
-                                }
-                            }
-                        }
+                        Text("Wheels joints: none", fontSize = 12.sp, color = Color.Gray)
                     }
                 }
             }
         }
     }
 }
+
+// Data class for ConfiguratorPart with DB-friendly fields
+data class ConfiguratorPart(
+    val id: String,
+    val name: String,
+    val type: String,  // "Frame" or "Wheels"
+    val imageUrl: String,  // URL stored in DB
+    // Joint coordinates stored as "x:y" strings in DB (no larger than 16000x16000)
+    val jointCoords: List<JointCoord> = emptyList()  // Empty by default, populated when user adds points
+)
+
+// JointCoord stores x,y as floats, will be saved as "x:y" string in DB
+data class JointCoord(
+    val x: Float,
+    val y: Float
+)
