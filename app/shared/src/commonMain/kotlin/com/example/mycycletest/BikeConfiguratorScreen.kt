@@ -1,5 +1,6 @@
 package com.example.mycycletest
 
+import androidx.compose.animation.core.alpha
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,10 +10,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.rememberTableIndex
+import androidx.compose.ui.util.rememberWindowCoordinates
+import androidx.compose.animation.*
+import androidx.compose.ui.platform.setText
+import com.example.mycycletest.service.ConfiguratorService
 
 @Composable
 fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
@@ -28,6 +36,9 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
     var frameDropdownExpanded by remember { mutableStateOf(false) }
     var wheelsDropdownExpanded by remember { mutableStateOf(false) }
     var groupsetDropdownExpanded by remember { mutableStateOf(false) }
+
+    // Track whether any part has been uploaded/saved (connection joints show only after admin upload)
+    var showConnectionJoints by remember { mutableStateOf(parts.isNotEmpty()) }
 
     Column(
         modifier = Modifier
@@ -119,80 +130,134 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp)
+        // Visual Assembly Canvas - displays actual pictures of picked parts
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(520.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            // Visual Assembly Canvas displaying actual pictures of picked parts
-            Card(
+            Box(
                 modifier = Modifier
-                    .weight(1.5f)
-                    .height(480.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FA))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFF8F9FA))
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                    // Frame picture display - shows actual image
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height((200 * zoomScale).dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
                     ) {
-                        // Frame picture display
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height((200 * zoomScale).dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            // AsyncImage for actual picture rendering
+                            AsyncImage(
+                                model = selectedFrame?.imageUrl,
+                                placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize()
+                            ) { p ->
+                                Image(
+                                    painter = p,
+                                    contentDescription = selectedFrame?.name,
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            // Fallback if no image URL
+                            if (selectedFrame == null || selectedFrame.imageUrl.isBlank()) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("🖼️", fontSize = 48.sp)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text("Frame Picture: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text(selectedFrame?.imageUrl ?: "", fontSize = 11.sp, color = Color.Gray)
+                                    Text("Add a frame via Admin → Upload Picture & Save", fontSize = 11.sp, color = Color.Gray)
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Frame: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Picked Wheels & Groupset overlay - show actual images
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Wheels card - shows actual picture
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(140.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                if (selectedWheels != null && !selectedWheels.imageUrl.isBlank()) {
+                                    AsyncImage(
+                                        model = selectedWheels.imageUrl,
+                                        placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) { p ->
+                                        Image(
+                                            painter = p,
+                                            contentDescription = selectedWheels.name,
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Wheels: ${selectedWheels?.name ?: "None"}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Text("Added: ${selectedWheels?.name ?: ""}", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
+                                } else {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("🛞", fontSize = 28.sp)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("Wheels: ${selectedWheels?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text("Select wheels to appear here", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
+                                    }
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Picked Wheels & Groupset overlay
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        // Groupset card - shows actual picture
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(140.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
                         ) {
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(110.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("🛞", fontSize = 28.sp)
-                                        Text("Wheels: ${selectedWheels?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text(selectedWheels?.imageUrl ?: "", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                if (selectedGroupset != null && !selectedGroupset.imageUrl.isBlank()) {
+                                    AsyncImage(
+                                        model = selectedGroupset.imageUrl,
+                                        placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) { p ->
+                                        Image(
+                                            painter = p,
+                                            contentDescription = selectedGroupset.name,
+                                            contentScale = ContentScale.Crop
+                                        )
                                     }
-                                }
-                            }
-
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(110.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Groupset: ${selectedGroupset?.name ?: "None"}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Text("Added: ${selectedGroupset?.name ?: ""}", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
+                                } else {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text("⚙️", fontSize = 28.sp)
+                                        Spacer(modifier = Modifier.height(4.dp))
                                         Text("Groupset: ${selectedGroupset?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text(selectedGroupset?.imageUrl ?: "", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
+                                        Text("Select groupset to appear here", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
                                     }
                                 }
                             }
@@ -200,12 +265,14 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                     }
                 }
             }
+        }
 
-            // Connection Joints & Contact Points List (Right)
+        // Connection Joints & Contact Points - only appears after parts uploaded/saved in admin
+        if (showConnectionJoints || selectedFrame != null || selectedWheels != null || selectedGroupset != null) {
             Card(
                 modifier = Modifier
                     .weight(1f)
-                    .height(480.dp),
+                    .height(400.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 shape = RoundedCornerShape(16.dp)
@@ -216,9 +283,27 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                         .padding(20.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text("Connection Joints & Contact Points", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("Configured automatically upon admin part upload & save.", fontSize = 12.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Header showing when joints appeared
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Connection Joints & Contact Points",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        // Show timestamp of last upload
+                        if (parts.isNotEmpty()) {
+                            Text(
+                                "• ${parts.size} part(s) configured",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     val allPoints = mutableListOf<ConnectionPoint>()
                     selectedFrame?.let { allPoints.addAll(it.points) }
@@ -226,7 +311,11 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                     selectedGroupset?.let { allPoints.addAll(it.points) }
 
                     if (allPoints.isEmpty()) {
-                        Text("No contact points configured.", color = Color.Gray)
+                        Text(
+                            "No contact points configured. Upload a part via Admin → Add New Part to configure connection joints.",
+                            fontSize = 13.sp,
+                            color = Color.Gray
+                        )
                     } else {
                         allPoints.forEach { point ->
                             Card(
@@ -244,9 +333,19 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                                 ) {
                                     Column {
                                         Text(point.name, fontWeight = FontWeight.Bold)
-                                        Text("Position X: ${(point.x * 100).toInt()}% | Y: ${(point.y * 100).toInt()}%", fontSize = 12.sp, color = Color.Gray)
+                                        Text(
+                                            "Position: X ${(point.x * 100).toInt}% | Y ${(point.y * 100).toInt}%",
+                                            fontSize = 11.sp,
+                                            color = Color.Gray
+                                        )
                                     }
-                                    Text("✓ Linked", color = Color(0xFF34C759), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    // Checkmark shows joint is linked/connected
+                                    Text(
+                                        "✓ Connected",
+                                        color = Color(0xFF34C759),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
                                 }
                             }
                         }
