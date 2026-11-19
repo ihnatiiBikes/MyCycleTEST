@@ -1,0 +1,6 @@
+/.xdp-.~*
+input/*
+!input/inputFileName.h
+output/*
+!output/outputFileManager.cpp
+!output/outputFileManager.h
