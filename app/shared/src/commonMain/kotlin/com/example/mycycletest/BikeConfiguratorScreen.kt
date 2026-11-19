@@ -1,10 +1,14 @@
 package com.example.mycycletest
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -52,7 +56,7 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
         // Selection Dropdowns - only Frame and Wheels
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
+            horizontalArrangement = Arrangement.SpacedBy(24.dp)
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 OutlinedButton(
@@ -166,7 +170,10 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                     } else {
                         // Placeholder when no frame selected
                         Box(
-                            modifier = Modifier.fillMaxWidth().height(280.dp).background(Color.Gray),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(280.dp)
+                                .background(Color.Gray),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -230,7 +237,10 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                         }
                     } else {
                         Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp).background(Color.Gray),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .background(Color.Gray),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

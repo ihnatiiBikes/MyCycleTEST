@@ -24,13 +24,7 @@ data class ConnectionPoint(
     var y: Float = 0.5f
 )
 
-data class ConfiguratorPart(
-    val id: String,
-    val name: String,
-    val type: String,
-    val imageUrl: String,
-    val points: MutableList<ConnectionPoint>
-)
+
 
 sealed class ShopScreen {
     object Home : ShopScreen()
