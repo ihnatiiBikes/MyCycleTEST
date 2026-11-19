@@ -32,6 +32,11 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
     // Track whether any part has been uploaded/saved (connection joints show only after admin upload)
     var showConnectionJoints by remember { mutableStateOf(parts.isNotEmpty()) }
 
+    // Resolve nullable parts safely - avoid smart cast on delegated properties
+    val maybeFrame: ConfiguratorPart? = selectedFrame
+    val maybeWheels: ConfiguratorPart? = selectedWheels
+    val maybeGroupset: ConfiguratorPart? = selectedGroupset
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -122,7 +127,7 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Visual Assembly Canvas - displays actual pictures of picked parts
+        // Visual Assembly Canvas - displays pictures of picked parts
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -142,7 +147,7 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Frame picture display
+                    // Frame picture display - show image URL or placeholder
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -150,17 +155,11 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
                     ) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            // Show frame picture or placeholder
-                            if (selectedFrame != null && selectedFrame.imageUrl.isNotBlank()) {
-                                // Try to display image - use painter if available, otherwise text
-                                try {
-                                    // AsyncImage with Coil would go here, but using basic Compose
-                                    // For now, show the image URL and a note
-                                    Text("Frame Image URL: ${selectedFrame.imageUrl}", fontSize = 12.sp, color = Color(0xFF666666))
-                                    Text("Frame: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                } catch (e: Exception) {
-                                    Text("Frame: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                }
+                            // Show frame info - no try/catch, no smart cast on delegated property
+                            if (maybeFrame != null && maybeFrame.imageUrl.isNotBlank()) {
+                                Text("Frame Image URL: ${maybeFrame.imageUrl}", fontSize = 12.sp, color = Color(0xFF666666))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Frame: ${maybeFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             } else {
                                 Text("🖼️", fontSize = 48.sp)
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -185,10 +184,11 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                if (selectedWheels != null && selectedWheels.imageUrl.isNotBlank()) {
-                                    Text("Wheels Image URL: ${selectedWheels.imageUrl}", fontSize = 11.sp, color = Color(0xFF666666))
+                                if (maybeWheels != null && maybeWheels.imageUrl.isNotBlank()) {
+                                    Text("Wheels Image URL: ${maybeWheels.imageUrl}", fontSize = 11.sp, color = Color(0xFF666666))
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Wheels: ${selectedWheels?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Wheels: ${maybeWheels?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text("Added: selected", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
                                 } else {
                                     Text("🛞", fontSize = 28.sp)
@@ -207,10 +207,11 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                if (selectedGroupset != null && selectedGroupset.imageUrl.isNotBlank()) {
-                                    Text("Groupset Image URL: ${selectedGroupset.imageUrl}", fontSize = 11.sp, color = Color(0xFF666666))
+                                if (maybeGroupset != null && maybeGroupset.imageUrl.isNotBlank()) {
+                                    Text("Groupset Image URL: ${maybeGroupset.imageUrl}", fontSize = 11.sp, color = Color(0xFF666666))
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Groupset: ${selectedGroupset?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Groupset: ${maybeGroupset?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text("Added: selected", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
                                 } else {
                                     Text("⚙️", fontSize = 28.sp)
@@ -252,7 +253,7 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        // Show timestamp of last upload
+                        // Show count of configured parts
                         if (parts.isNotEmpty()) {
                             Text(
                                 "• ${parts.size} part(s) configured",
