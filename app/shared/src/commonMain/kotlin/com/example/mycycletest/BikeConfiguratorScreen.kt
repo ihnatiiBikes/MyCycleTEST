@@ -1,6 +1,5 @@
 package com.example.mycycletest
 
-import androidx.compose.animation.core.alpha
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,16 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.rememberTableIndex
-import androidx.compose.ui.util.rememberWindowCoordinates
-import androidx.compose.animation.*
-import androidx.compose.ui.platform.setText
-import com.example.mycycletest.service.ConfiguratorService
 
 @Composable
 fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
@@ -134,7 +126,7 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(520.dp),
+                .height(480.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             shape = RoundedCornerShape(16.dp)
@@ -150,115 +142,81 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Frame picture display - shows actual image
+                    // Frame picture display
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height((200 * zoomScale).dp),
+                            .height(200.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
                     ) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            // AsyncImage for actual picture rendering
-                            AsyncImage(
-                                model = selectedFrame?.imageUrl,
-                                placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize()
-                            ) { p ->
-                                Image(
-                                    painter = p,
-                                    contentDescription = selectedFrame?.name,
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                            // Fallback if no image URL
-                            if (selectedFrame == null || selectedFrame.imageUrl.isBlank()) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("🖼️", fontSize = 48.sp)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Frame Picture: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text("Add a frame via Admin → Upload Picture & Save", fontSize = 11.sp, color = Color.Gray)
+                            // Show frame picture or placeholder
+                            if (selectedFrame != null && selectedFrame.imageUrl.isNotBlank()) {
+                                // Try to display image - use painter if available, otherwise text
+                                try {
+                                    // AsyncImage with Coil would go here, but using basic Compose
+                                    // For now, show the image URL and a note
+                                    Text("Frame Image URL: ${selectedFrame.imageUrl}", fontSize = 12.sp, color = Color(0xFF666666))
+                                    Text("Frame: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                } catch (e: Exception) {
+                                    Text("Frame: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                 }
                             } else {
+                                Text("🖼️", fontSize = 48.sp)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Frame: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("Frame Picture: ${selectedFrame?.name ?: "None"}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("Add a frame via Admin → Upload Picture & Save", fontSize = 11.sp, color = Color.Gray)
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Picked Wheels & Groupset overlay - show actual images
+                    // Picked Wheels & Groupset overlay
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Wheels card - shows actual picture
+                        // Wheels card
                         Card(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(140.dp),
+                                .height(110.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                if (selectedWheels != null && !selectedWheels.imageUrl.isBlank()) {
-                                    AsyncImage(
-                                        model = selectedWheels.imageUrl,
-                                        placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) { p ->
-                                        Image(
-                                            painter = p,
-                                            contentDescription = selectedWheels.name,
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
+                                if (selectedWheels != null && selectedWheels.imageUrl.isNotBlank()) {
+                                    Text("Wheels Image URL: ${selectedWheels.imageUrl}", fontSize = 11.sp, color = Color(0xFF666666))
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Wheels: ${selectedWheels?.name ?: "None"}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    Text("Added: ${selectedWheels?.name ?: ""}", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
+                                    Text("Wheels: ${selectedWheels?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Added: selected", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
                                 } else {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("🛞", fontSize = 28.sp)
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text("Wheels: ${selectedWheels?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text("Select wheels to appear here", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
-                                    }
+                                    Text("🛞", fontSize = 28.sp)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Wheels: ${selectedWheels?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Select wheels to appear here", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
                                 }
                             }
                         }
 
-                        // Groupset card - shows actual picture
+                        // Groupset card
                         Card(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(140.dp),
+                                .height(110.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFE9ECEF))
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                if (selectedGroupset != null && !selectedGroupset.imageUrl.isBlank()) {
-                                    AsyncImage(
-                                        model = selectedGroupset.imageUrl,
-                                        placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) { p ->
-                                        Image(
-                                            painter = p,
-                                            contentDescription = selectedGroupset.name,
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
+                                if (selectedGroupset != null && selectedGroupset.imageUrl.isNotBlank()) {
+                                    Text("Groupset Image URL: ${selectedGroupset.imageUrl}", fontSize = 11.sp, color = Color(0xFF666666))
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Groupset: ${selectedGroupset?.name ?: "None"}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    Text("Added: ${selectedGroupset?.name ?: ""}", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
+                                    Text("Groupset: ${selectedGroupset?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Added: selected", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
                                 } else {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("⚙️", fontSize = 28.sp)
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text("Groupset: ${selectedGroupset?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text("Select groupset to appear here", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
-                                    }
+                                    Text("⚙️", fontSize = 28.sp)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Groupset: ${selectedGroupset?.name ?: "None"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Select groupset to appear here", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
                                 }
                             }
                         }
@@ -334,7 +292,7 @@ fun BikeConfiguratorScreen(parts: List<ConfiguratorPart>, onBack: () -> Unit) {
                                     Column {
                                         Text(point.name, fontWeight = FontWeight.Bold)
                                         Text(
-                                            "Position: X ${(point.x * 100).toInt}% | Y ${(point.y * 100).toInt}%",
+                                            "Position: X ${(point.x * 100).toInt()}% | Y ${(point.y * 100).toInt()}%",
                                             fontSize = 11.sp,
                                             color = Color.Gray
                                         )
