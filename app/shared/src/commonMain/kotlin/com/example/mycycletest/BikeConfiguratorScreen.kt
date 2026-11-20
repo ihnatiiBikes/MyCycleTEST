@@ -24,8 +24,11 @@ fun BikeConfiguratorScreen(parts: MutableList<ConfiguratorPart>, onBack: () -> U
     val frames = parts.filter { it.type == "Frame" }
     val wheels = parts.filter { it.type == "Wheels" }
 
-    var selectedFrame by remember { mutableStateOf(frames.firstOrNull()) }
-    var selectedWheels by remember { mutableStateOf(wheels.firstOrNull()) }
+    var selectedFrameId by remember { mutableStateOf<String?>(null) }
+    var selectedWheelsId by remember { mutableStateOf<String?>(null) }
+
+    val selectedFrame = frames.find { it.id == selectedFrameId } ?: frames.firstOrNull()
+    val selectedWheels = wheels.find { it.id == selectedWheelsId } ?: wheels.firstOrNull()
 
     val maybeFrame: ConfiguratorPart? = selectedFrame
     val maybeWheels: ConfiguratorPart? = selectedWheels
@@ -69,7 +72,7 @@ fun BikeConfiguratorScreen(parts: MutableList<ConfiguratorPart>, onBack: () -> U
                         DropdownMenuItem(
                             text = { Text(frame.name) },
                             onClick = {
-                                selectedFrame = frame
+                                selectedFrameId = frame.id
                                 frameDropdownExpanded = false
                             }
                         )
@@ -90,7 +93,7 @@ fun BikeConfiguratorScreen(parts: MutableList<ConfiguratorPart>, onBack: () -> U
                         DropdownMenuItem(
                             text = { Text(wheel.name) },
                             onClick = {
-                                selectedWheels = wheel
+                                selectedWheelsId = wheel.id
                                 wheelsDropdownExpanded = false
                             }
                         )

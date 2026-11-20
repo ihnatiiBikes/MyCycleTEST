@@ -54,7 +54,7 @@ fun AdminPartConfiguratorScreen(
     var frontWheelUrl by remember { mutableStateOf(if (initialIsWheels) initialPart?.imageUrl ?: assetFrontWheels.first() else assetFrontWheels.first()) }
     var rearWheelName by remember { mutableStateOf(initialWheelNames?.getOrNull(1) ?: "Rear Wheel") }
     var rearWheelUrl by remember { mutableStateOf(if (initialIsWheels) initialPart?.rearImageUrl ?: assetRearWheels.first() else assetRearWheels.first()) }
-    var wheelScale by remember { mutableFloatStateOf(initialPart?.wheelScale ?: 0.45f) }
+    var wheelScale by remember { mutableFloatStateOf(initialPart?.wheelScale ?: 0.7f) }
 
     var jointCoords by remember { 
         mutableStateOf(
@@ -71,6 +71,47 @@ fun AdminPartConfiguratorScreen(
     var stepSize by remember { mutableStateOf(0.01f) } // High precision default step
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
+    fun loadPartIntoForm(part: ConfiguratorPart?) {
+        if (part != null) {
+            selectedPartId = part.id
+            partType = part.type
+            if (part.type == "Frame") {
+                frameName = part.name
+                frameImageUrl = part.imageUrl
+            } else {
+                val names = part.name.split(" & ").takeIf { it.size == 2 }
+                frontWheelName = names?.getOrNull(0) ?: "Front Wheel"
+                rearWheelName = names?.getOrNull(1) ?: "Rear Wheel"
+                frontWheelUrl = part.imageUrl
+                rearWheelUrl = part.rearImageUrl ?: assetRearWheels.first()
+                wheelScale = part.wheelScale
+            }
+            jointCoords = if (part.jointCoords.isNotEmpty()) {
+                part.jointCoords.toMutableList()
+            } else if (part.type == "Frame") {
+                mutableListOf(JointCoord(0.2f, 0.7f), JointCoord(0.8f, 0.7f))
+            } else {
+                mutableListOf(JointCoord(0.5f, 0.5f), JointCoord(0.5f, 0.5f))
+            }
+        } else {
+            selectedPartId = null
+            if (partType == "Frame") {
+                frameName = "Frame #${parts.count { it.type == "Frame" } + 1}"
+                frameImageUrl = assetFrames.first()
+                jointCoords = mutableListOf(JointCoord(0.2f, 0.7f), JointCoord(0.8f, 0.7f))
+            } else {
+                frontWheelName = "Front Wheel"
+                rearWheelName = "Rear Wheel"
+                frontWheelUrl = assetFrontWheels.first()
+                rearWheelUrl = assetRearWheels.first()
+                wheelScale = 0.7f
+                jointCoords = mutableListOf(JointCoord(0.5f, 0.5f), JointCoord(0.5f, 0.5f))
+            }
+        }
+        selectedJointIndex = 0
+        statusMessage = null
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -85,6 +126,64 @@ fun AdminPartConfiguratorScreen(
                 Text("← Back to Admin Panel")
             }
             Text("Admin Asset Joint & Mount Configurator", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- STORED PARTS TOOLBAR & CREATOR ---
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF2F4F4)),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Store Parts (${parts.size}):",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+
+                Button(
+                    onClick = { loadPartIntoForm(null) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selectedPartId == null) Color(0xFF27AE60) else Color(0xFF7F8C8D)
+                    ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Text("+ Add New Part", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    parts.forEach { part ->
+                        val isSelected = selectedPartId == part.id
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { loadPartIntoForm(part) },
+                            label = {
+                                Text(
+                                    text = "${if (part.type == "Frame") "🚲" else "🛞"} ${part.name}",
+                                    fontSize = 12.sp
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = if (part.type == "Frame") Color(0xFF0071E3) else Color(0xFF8E44AD),
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -330,12 +429,12 @@ fun AdminPartConfiguratorScreen(
                     Button(
                         onClick = {
                             val partToSave = ConfiguratorPart(
-                                id = selectedPartId ?: "part-${kotlin.random.Random.nextInt()}",
+                                id = selectedPartId ?: "part-${kotlin.random.Random.nextInt(10000, 99999)}",
                                 name = if (partType == "Frame") frameName else "$frontWheelName & $rearWheelName",
                                 type = partType,
                                 imageUrl = if (partType == "Frame") frameImageUrl else frontWheelUrl,
                                 rearImageUrl = if (partType == "Wheels") rearWheelUrl else null,
-                                wheelScale = if (partType == "Wheels") wheelScale else 0.45f,
+                                wheelScale = if (partType == "Wheels") wheelScale else 0.7f,
                                 jointCoords = jointCoords
                             )
                             if (selectedPartId != null) {
@@ -345,12 +444,18 @@ fun AdminPartConfiguratorScreen(
                                 parts.add(partToSave)
                                 selectedPartId = partToSave.id
                             }
-                            statusMessage = "Successfully saved part & joint points for consumer web!"
+                            val framesCount = parts.count { it.type == "Frame" }
+                            val wheelsCount = parts.count { it.type == "Wheels" }
+                            statusMessage = "Published to Consumer Web! Total store parts: $framesCount Frames, $wheelsCount Wheels"
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B4D3E)),
                         modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) {
-                        Text("Save & Publish to Consumer Web", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(
+                            text = if (selectedPartId != null) "Update & Publish Selected Part" else "Save & Publish New Part to Consumer Web",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
                     }
 
                     if (statusMessage != null) {
