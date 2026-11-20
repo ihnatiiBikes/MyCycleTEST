@@ -22,25 +22,24 @@ fun BikeShopApp() {
         mutableStateListOf(
             ConfiguratorPart(
                 id = "f-1",
-                name = "Aero Carbon Frame Pro",
+                name = "Factor One Frame",
                 type = "Frame",
-                imageUrl = "https://www.mycycle.ie/v/vspfiles/photos/FRAME-CARBON-2.jpg",
-                points = mutableListOf(
-                    ConnectionPoint("p1", "Front Derailleur", 0.45f, 0.6f),
-                    ConnectionPoint("p2", "Rear Derailleur", 0.7f, 0.75f),
-                    ConnectionPoint("p3", "Front Brake Caliper", 0.25f, 0.4f),
-                    ConnectionPoint("p4", "Rear Brake Caliper", 0.75f, 0.65f),
-                    ConnectionPoint("p5", "Chainwheel", 0.5f, 0.65f),
-                    ConnectionPoint("p6", "Levers / Cockpit", 0.25f, 0.25f)
+                imageUrl = "assets/frames/factor_frame.png",
+                jointCoords = listOf(
+                    JointCoord(0.2f, 0.7f), // Blue joint (rear axle)
+                    JointCoord(0.8f, 0.7f)  // Green joint (front axle)
                 )
             ),
             ConfiguratorPart(
                 id = "w-1",
-                name = "Carbon Disc Wheels 50mm",
+                name = "Front Wheel & Rear Wheel",
                 type = "Wheels",
-                imageUrl = "https://www.mycycle.ie/v/vspfiles/photos/WHEELS-CARBON-2.jpg",
-                points = mutableListOf(
-                    ConnectionPoint("w1", "Hub Axle Joint", 0.5f, 0.5f)
+                imageUrl = "assets/wheels/front/Black-Inc-62-silver-front-4472x4472.webp",
+                rearImageUrl = "assets/wheels/rear/Black-Inc-62-silver-rear-4472x4472.webp",
+                wheelScale = 0.45f,
+                jointCoords = listOf(
+                    JointCoord(0.5f, 0.5f), // Blue joint (rear hub)
+                    JointCoord(0.5f, 0.5f)  // Green joint (front hub)
                 )
             )
         )
@@ -325,7 +324,15 @@ fun BikeShopApp() {
                             users = users,
                             products = dbProducts,
                             configuratorParts = configuratorParts,
-                            onDismiss = { currentScreen = ShopScreen.Home; updateWebRoute("#/") }
+                            onDismiss = { currentScreen = ShopScreen.Home; updateWebRoute("#/") },
+                            onOpenPartConfigurator = { currentScreen = ShopScreen.AdminPartConfigurator() }
+                        )
+                    }
+                    is ShopScreen.AdminPartConfigurator -> {
+                        AdminPartConfiguratorScreen(
+                            parts = configuratorParts,
+                            initialPart = screen.part,
+                            onBack = { currentScreen = ShopScreen.AdminPanel }
                         )
                     }
                     is ShopScreen.CustomerPortal -> {

@@ -32,4 +32,5 @@ sealed class ShopScreen {
     object AdminPanel : ShopScreen()
     object CustomerPortal : ShopScreen()
     object BikeConfigurator : ShopScreen()
+    data class AdminPartConfigurator(val part: ConfiguratorPart? = null) : ShopScreen()
 }

@@ -1,6 +1,7 @@
 package com.example.mycycletest
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,16 +16,12 @@ fun AdminShopControlPanel(
     users: MutableList<User>,
     products: MutableList<UiProduct>,
     configuratorParts: MutableList<ConfiguratorPart>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOpenPartConfigurator: () -> Unit
 ) {
     var fileNameInput by remember { mutableStateOf("trek_catalog.csv") }
     var csvContentInput by remember { mutableStateOf("DOMANE,12,4,Red,56,9\nEMONDA,10,3,Black,54,8") }
     var importStatus by remember { mutableStateOf<String?>(null) }
-
-    var newPartName by remember { mutableStateOf("") }
-    var newPartType by remember { mutableStateOf("Frame") }
-    var newPartImageUrl by remember { mutableStateOf("https://www.mycycle.ie/v/vspfiles/photos/CUSTOM-PART-2.jpg") }
-    var partAddStatus by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -39,66 +36,25 @@ fun AdminShopControlPanel(
             Text("Admin Shop Control Panel", fontSize = 28.sp, fontWeight = FontWeight.Bold)
             Button(onClick = onDismiss) { Text("Back to Store View") }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Configurator Part Creator with Picture & Server Storage
+        // Configurator Joint & Mount Setup Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Text("Bike Configurator - Add New Part (Frame / Groupset / Wheels)", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Bike Configurator Part Joint & Mount Setup", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Require a picture, download/save it to server storage, and configure connection joint points.", fontSize = 13.sp, color = Color.Gray)
+                Text("Open the interactive picture URL renderer & joint point configurator to assign green/blue mount points.", fontSize = 13.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = newPartName,
-                    onValueChange = { newPartName = it },
-                    label = { Text("Part Name (e.g. Carbon Enduro Frame)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = newPartImageUrl,
-                    onValueChange = { newPartImageUrl = it },
-                    label = { Text("Part Picture URL / Server Storage Path") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Button(onClick = { newPartType = "Frame" }, colors = ButtonDefaults.buttonColors(containerColor = if (newPartType == "Frame") Color(0xFF0071E3) else Color.Gray)) { Text("Frame") }
-                    Button(onClick = { newPartType = "Groupset" }, colors = ButtonDefaults.buttonColors(containerColor = if (newPartType == "Groupset") Color(0xFF0071E3) else Color.Gray)) { Text("Groupset") }
-                    Button(onClick = { newPartType = "Wheels" }, colors = ButtonDefaults.buttonColors(containerColor = if (newPartType == "Wheels") Color(0xFF0071E3) else Color.Gray)) { Text("Wheels") }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-
                 Button(
-                    onClick = {
-                        if (newPartName.isNotBlank() && newPartImageUrl.isNotBlank()) {
-                            val newPart = ConfiguratorPart(
-                                id = "part-${kotlin.random.Random.nextInt()}",
-                                name = newPartName,
-                                type = newPartType,
-                                imageUrl = newPartImageUrl,
-                                points = mutableListOf(
-                                    ConnectionPoint("j1", "Front Connection Joint", 0.5f, 0.5f),
-                                    ConnectionPoint("j2", "Rear Connection Joint", 0.7f, 0.7f)
-                                )
-                            )
-                            configuratorParts.add(newPart)
-                            partAddStatus = "Successfully uploaded picture and saved $newPartType part to server storage!"
-                            newPartName = ""
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B4D3E))
+                    onClick = onOpenPartConfigurator,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0071E3))
                 ) {
-                    Text("Upload Picture & Save Configurator Part")
-                }
-
-                if (partAddStatus != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(partAddStatus!!, color = Color(0xFF34C759), fontWeight = FontWeight.Bold)
+                    Text("Configure Part Joints & Mounts (Admin Screen)", fontWeight = FontWeight.Bold)
                 }
             }
         }
